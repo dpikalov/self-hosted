@@ -43,7 +43,7 @@ echo "${_group}Starting Sentry for tests ..."
 echo 'SENTRY_BEACON=False' >> $SENTRY_CONFIG_PY
 $dcr web createuser --superuser --email $TEST_USER --password $TEST_PASS || true
 $dc up -d
-printf "Waiting for Sentry to be up"; timeout 90 bash -c 'until $(curl -Isf -o /dev/null $SENTRY_TEST_HOST); do printf '.'; sleep 0.5; done'
+printf "Waiting for Sentry to be up"; timeout 90 bash -c 'until $(curl -Isf $SENTRY_TEST_HOST); do printf '.'; sleep 0.5; done'
 echo ""
 echo "${_endgroup}"
 
@@ -52,7 +52,7 @@ get_csrf_token () { awk '$6 == "sc" { print $7 }' $COOKIE_FILE; }
 sentry_api_request () { curl -s -H 'Accept: application/json; charset=utf-8' -H "Referer: $SENTRY_TEST_HOST" -H 'Content-Type: application/json' -H "X-CSRFToken: $(get_csrf_token)" -b "$COOKIE_FILE" -c "$COOKIE_FILE" "$SENTRY_TEST_HOST/api/0/$1" ${@:2}; }
 
 login () {
-  INITIAL_AUTH_REDIRECT=$(curl -sL -o /dev/null $SENTRY_TEST_HOST -w %{url_effective})
+  INITIAL_AUTH_REDIRECT=$(curl -sL $SENTRY_TEST_HOST -w %{url_effective})
   if [ "$INITIAL_AUTH_REDIRECT" != "$SENTRY_TEST_HOST/auth/login/sentry/" ]; then
     echo "Initial /auth/login/ redirect failed, exiting..."
     echo "$INITIAL_AUTH_REDIRECT"
@@ -77,14 +77,14 @@ declare -a LOGIN_TEST_STRINGS=(
 for i in "${LOGIN_TEST_STRINGS[@]}"
 do
   echo "Testing '$i'..."
-  echo "$LOGIN_RESPONSE" | grep "$i[,}]" >& /dev/null
+  echo "$LOGIN_RESPONSE" | grep "$i[,}]"
   echo "Pass."
 done
 echo "${_endgroup}"
 
 echo "${_group}Running moar tests !!!"
 # Set up initial/required settings (InstallWizard request)
-sentry_api_request "internal/options/?query=is:required" -X PUT --data '{"mail.use-tls":false,"mail.username":"","mail.port":25,"system.admin-email":"ben@byk.im","mail.password":"","system.url-prefix":"'"$SENTRY_TEST_HOST"'","auth.allow-registration":false,"beacon.anonymous":true}' > /dev/null
+sentry_api_request "internal/options/?query=is:required" -X PUT --data '{"mail.use-tls":false,"mail.username":"","mail.port":25,"system.admin-email":"ben@byk.im","mail.password":"","system.url-prefix":"'"$SENTRY_TEST_HOST"'","auth.allow-registration":false,"beacon.anonymous":true}'
 
 SENTRY_DSN=$(sentry_api_request "projects/sentry/internal/keys/" | awk 'BEGIN { RS=",|:{\n"; FS="\""; } $2 == "public" && $4 ~ "^http" { print $4; exit; }')
 # We ignore the protocol and the host as we already know those
@@ -101,7 +101,7 @@ EVENT_PATH="projects/sentry/internal/events/$TEST_EVENT_ID/"
 export -f sentry_api_request get_csrf_token
 export SENTRY_TEST_HOST COOKIE_FILE EVENT_PATH
 printf "Getting the test event back"
-timeout 60 bash -c 'until $(sentry_api_request "$EVENT_PATH" -Isf -X GET -o /dev/null); do printf '.'; sleep 0.5; done'
+timeout 60 bash -c 'until $(sentry_api_request "$EVENT_PATH" -Isf -X GET); do printf '.'; sleep 0.5; done'
 echo " got it!";
 
 EVENT_RESPONSE=$(sentry_api_request "$EVENT_PATH")
@@ -114,7 +114,7 @@ declare -a EVENT_TEST_STRINGS=(
 for i in "${EVENT_TEST_STRINGS[@]}"
 do
   echo "Testing '$i'..."
-  echo "$EVENT_RESPONSE" | grep "$i[,}]" >& /dev/null
+  echo "$EVENT_RESPONSE" | grep "$i[,}]"
   echo "Pass."
 done
 echo "${_endgroup}"
