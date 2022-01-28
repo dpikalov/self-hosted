@@ -1,3 +1,10 @@
+# create-docker-volumes.sh
+echo "Created $(docker volume create --name=sentry-postgres)."
+
+# source install-wal2json.sh
+source install-wal2json.sh
+
+# upgrade-postgres.sh
 echo "${_group}Ensuring proper PostgreSQL version ..."
 
 # Very naively check whether there's an existing sentry-postgres volume and the PG version in it
@@ -22,3 +29,6 @@ if [[ -n "$(docker volume ls -q --filter name=sentry-postgres)" && "$(docker run
 fi
 
 echo "${_endgroup}"
+
+# run container
+docker-compose up -d
