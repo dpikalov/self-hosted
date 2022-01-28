@@ -1,3 +1,4 @@
+#version: "3.4"
 x-restart-policy: &restart_policy
   restart: unless-stopped
 x-depends_on-healthy: &depends_on-healthy
@@ -69,6 +70,10 @@ x-sentry-defaults: &sentry_defaults
     - "./sentry:/etc/sentry"
     - "./geoip:/geoip:ro"
     - "./certificates:/usr/local/share/ca-certificates:ro"
+  # pikalov. For test only (linux only)
+  #extra_hosts:
+  #  - "host.docker.internal:host-gateway"
+
 x-snuba-defaults: &snuba_defaults
   <<: *restart_policy
   depends_on:
@@ -142,6 +147,9 @@ services:
         read_only: true
         source: ./postgres/
         target: /opt/sentry/
+    # pikalov
+    network_mode: host
+
   zookeeper:
     <<: *restart_policy
     image: "confluentinc/cp-zookeeper:5.5.0"
